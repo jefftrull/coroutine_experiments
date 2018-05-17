@@ -32,10 +32,15 @@ static int counter = 0;
 
 struct my_awaitable {
     struct awaiter {
-        bool await_ready() const noexcept { return true; }
+        bool await_ready() const noexcept { return false; }  // pretend to not be ready
         int  await_resume()      noexcept { return detail::counter++; }
         template<typename T>
-        void await_suspend(std::experimental::coroutine_handle<T> const&)     noexcept {}
+        void await_suspend(std::experimental::coroutine_handle<T> coro) noexcept {
+            // decide we are ready after all, so resume caller
+            coro.resume();
+            // we could also leave off the call to resume() and return false from a bool version
+            // of this function. That means "don't suspend".
+        }
     };
     awaiter operator co_await () { return awaiter{}; }
 };
