@@ -27,9 +27,9 @@ struct my_return {
         promise_type() : m_current_value(-1) {}
 
         // coroutine promise requirements:
-    
+
         auto initial_suspend() const noexcept {
-            return std::experimental::suspend_always(); // ?? not sure
+            return std::experimental::suspend_never(); // produce at least one value
         }
 
         auto final_suspend() const noexcept {
