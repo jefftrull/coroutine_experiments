@@ -32,15 +32,16 @@ struct await_return_object {
 
     // promise type must have either return_void or return_value member but not both
     // not even if one is SFINAEd out - you cannot have both names present, per Lewis Baker
-    template<typename U=T>
+    template<typename U>
     struct promise_base {
         auto return_value(U const&) const noexcept {
             return std::experimental::suspend_always(); // ?? not sure
         }
     };
-    // void specialization to replace return_value() with return_void() is below at namespace scope
 
-    struct promise_type : promise_base<> {
+    // void specialization to replace with return_void() is below at namespace scope
+
+    struct promise_type : promise_base<T> {
         // coroutine promise requirements:
 
         auto initial_suspend() const noexcept {
@@ -51,8 +52,7 @@ struct await_return_object {
             return std::experimental::suspend_always(); // ?? not sure
         }
 
-        // either return_void or return_value will exist, depending on T,
-        // thanks to promise_base
+        // either return_void or return_value will exist, depending on T
 
         await_return_object get_return_object() {
             return await_return_object(*this);
@@ -69,7 +69,6 @@ private:
 
 };
 
-// specialization of promise_base to introduce return_void(), omit return_value()
 template<>
 template<>
 struct await_return_object<void>::promise_base<void> {

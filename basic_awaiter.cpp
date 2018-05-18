@@ -24,6 +24,7 @@ SOFTWARE.
 #include <iostream>
 #include <experimental/coroutine>
 #include "co_awaiter.hpp"
+#include "my_awaitable.hpp"
 
 namespace detail
 {
@@ -31,27 +32,12 @@ namespace detail
 static int counter = 0;
 }
 
-struct my_awaitable {
-    struct awaiter {
-        bool await_ready() const noexcept { return false; }  // pretend to not be ready
-        int  await_resume()      noexcept { return detail::counter++; }
-        template<typename T>
-        void await_suspend(std::experimental::coroutine_handle<T> coro) noexcept {
-            // decide we are ready after all, so resume caller
-            coro.resume();
-            // we could also leave off the call to resume() and return false from a bool version
-            // of this function. That means "don't suspend".
-        }
-    };
-    awaiter operator co_await () { return awaiter{}; }
-};
-
 // now we need a coroutine to perform co_await on my awaitable
 // co_await must be inside a coroutine, and main cannot be a coroutine, so...
 
 
 await_return_object<> try_awaiting() {
-    my_awaitable awaitable;
+    auto awaitable = make_my_awaitable([](){ return detail::counter++; });
     // count to five
     for (auto i = co_await awaitable; i != 5;i = co_await awaitable) {
         std::cout << "not there yet: " << i << "\n";
