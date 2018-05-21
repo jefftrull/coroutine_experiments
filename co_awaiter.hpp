@@ -1,6 +1,6 @@
 // A basic return object and promise type for a coroutine that co_awaits
 /*
-Copyright (c) 2018 Jeff Trull <edaskel@att.net
+Copyright (c) 2018 Jeff Trull <edaskel@att.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,21 @@ SOFTWARE.
 
 template<typename T=void>
 struct await_return_object {
+    struct promise_type;
+    await_return_object(promise_type & p) : m_coro(std::experimental::coroutine_handle<promise_type>::from_promise(p)) {}
+
+    await_return_object(await_return_object const &) = delete;
+    await_return_object(await_return_object && other) {
+        m_coro = other.m_coro;
+        other.m_coro = nullptr;
+    }
+
+    ~await_return_object() {
+        if (m_coro) {
+            m_coro.destroy();
+        }
+    }
+
 
     // promise type must have either return_void or return_value member but not both
     // not even if one is SFINAEd out - you cannot have both names present, per Lewis Baker
@@ -62,7 +77,6 @@ struct await_return_object {
 
     };
 
-    await_return_object(promise_type & p) : m_coro(std::experimental::coroutine_handle<promise_type>::from_promise(p)) {}
 
 private:
     std::experimental::coroutine_handle<promise_type> m_coro;
