@@ -1,4 +1,4 @@
-// Doing some simple work with callbacks on a run queue
+// My callback example refactored into coroutines
 /*
 Copyright (c) 2018 Jeff Trull <edaskel@att.net
 
@@ -21,38 +21,25 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <iostream>
-#include "run_queue.hpp"
+// compute a*b+c in a coroutine in two stages, awaiting the multiply result
 
-// a representative expensive/high latency calculation
-// that delivers results with a callback
-template<typename Callback>
-void multiply(int a, int b, Callback cb) {
-    int result = a * b;
-    cb(result);
+// This is the coroutine equivalent of my multiply callback code in callbacks.cpp
+
+#include <iostream>
+#include "my_awaitable.hpp"
+#include "co_awaiter.hpp"
+
+await_return_object<> muladd() {
+    int a = 2;
+    int b = 3;
+    int c = 4;
+    // wait for our "long-running" task (previously handled by a callback)
+    int product = co_await make_my_awaitable([a,b]() { return a*b; });
+    int result = product + c;
+    std::cout << "result: " << result << "\n";
 }
 
 int main() {
-    run_queue work;
-
-    // use the work queue to calculate 2*3+4 in a really dumb way
-    // we launch a task to calculate 2*3, with a callback that adds 4
-    // this models a long-running task (the multiply) with a finishing callback
-    // the coroutine version is in cb_as_coro.cpp
-
-    work.add_task([](run_queue* tasks) {
-            // future coroutine
-            int a = 2;
-            int b = 3;
-            int c = 4;
-            // queue long-running task
-            tasks->add_task([=](run_queue*) {
-                    multiply(a, b,
-                             [c](int product) {
-                                 int result = product + c;
-                                 std::cout << "result: " << result << "\n";
-                             });
-                });
-        });
-    work.run();
+    auto coro = muladd();
 }
+
