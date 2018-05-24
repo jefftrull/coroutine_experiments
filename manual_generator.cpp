@@ -108,7 +108,7 @@ my_return my_coro() {
 }
 
 int main() {
-    auto p = std::move(my_coro());   // immediate suspension with promise returned
+    auto p = my_coro();             // immediate suspension with promise returned
     std::cout << p.value() << "\n";
     p.advance();
     std::cout << p.value() << "\n";

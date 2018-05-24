@@ -66,7 +66,7 @@ int main() {
     // our main work
     co_spawn(io,                                     // where to run
              [](){ return muladd(); },               // what to do
-             [](std::exception_ptr e, int result) {  // completion handler
+             [](std::exception_ptr, int result) {    // completion handler
                  std::cout << "result: " << result << "\n";
              });
 

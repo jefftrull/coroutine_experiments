@@ -5,6 +5,8 @@ set( CMAKE_CXX_STANDARD 17 )
 # dependencies
 find_package( Boost 1.67 REQUIRED COMPONENTS system )
 
+add_compile_options( -Wall -Wextra -Werror )
+
 # a simple generator
 add_executable( mg manual_generator.cpp )
 # a simple thing-that-awaits
