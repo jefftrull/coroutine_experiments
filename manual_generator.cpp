@@ -2,7 +2,7 @@
 // coroutine_handle etc. but instead has its own mechanism
 
 /*
-Copyright (c) 2018 Jeff Trull <edaskel@att.net
+Copyright (c) 2018 Jeff Trull <edaskel@att.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

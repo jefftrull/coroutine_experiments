@@ -1,7 +1,7 @@
 // My callback example using co_await AND Asio's io_service as a run queue
 
 /*
-Copyright (c) 2018 Jeff Trull <edaskel@att.net
+Copyright (c) 2018 Jeff Trull <edaskel@att.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,7 @@ template <typename T>
 
 awaitable<int> multiply(int x, int y) {
     // arbitrary async operation so we suspend and resume from the run queue
-    auto token = co_await boost::asio::experimental::this_coro::token();
+    auto token = co_await this_coro::token();
     boost::asio::steady_timer t(token.get_executor().context(),
                                 boost::asio::chrono::milliseconds(50));
     co_await t.async_wait(token);  // suspend and run something else
