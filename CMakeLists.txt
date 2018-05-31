@@ -4,6 +4,7 @@ set( CMAKE_CXX_STANDARD 17 )
 
 # dependencies
 find_package( Boost 1.67 REQUIRED COMPONENTS system )
+find_package( Qt5Widgets REQUIRED )
 
 add_compile_options( -Wall -Wextra -Werror )
 
@@ -17,6 +18,12 @@ add_executable( cb callbacks.cpp run_queue.cpp )
 add_executable( cac cb_as_coro.cpp )
 # Asio as the execution queue *and* co_await
 add_executable( ac asio_coro.cpp )
+
+# Qt basic example, no coroutines
+QT5_WRAP_CPP( CR_MOC_SRC colorrect.h )
+add_executable( qb qt_basic.cpp ${CR_MOC_SRC} colorrect.cpp )
+target_compile_options( qb PUBLIC -stdlib=libc++ )
+target_link_libraries( qb Qt5::Widgets -stdlib=libc++ )
 
 foreach( ex mg ba cb cac ac )
     target_compile_options( ${ex} PUBLIC -fcoroutines-ts -stdlib=libc++ -D_LIBCPP_DEBUG_=1 )
