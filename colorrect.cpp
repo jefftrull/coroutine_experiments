@@ -32,14 +32,8 @@ ColorRect::ColorRect(QWidget *parent) :
                 "#111166", "#663311",
                 "#661133", "#336611",
                 "#331166", "#113366"}},
-    curColor{0},
-    changeTimer{new QTimer(this)}
-{
-    // set up the timer
-    connect(changeTimer, SIGNAL(timeout()),
-            this,        SLOT(changeColor()));
-    changeTimer->start(500);   // twice per second
-}
+    curColor{0}
+{}
 
 void
 ColorRect::setColor(std::string const& col)

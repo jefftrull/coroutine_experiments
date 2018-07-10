@@ -23,20 +23,24 @@ SOFTWARE.
 */
 
 #include <QApplication>
+#include <QTimer>
+
 #include "colorrect.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    // setup code in here
+    // a really simple widget
     ColorRect cr;
     cr.setWindowTitle("Color Cycler");
-    cr.changeColor();
-    cr.changeColor();
-    cr.changeColor();
-    cr.changeColor();
     cr.show();
+
+    // change widget color every 500ms
+    QTimer * changeTimer = new QTimer(&app);
+    QObject::connect(changeTimer, &QTimer::timeout,
+                     [&]() { cr.changeColor(); });
+    changeTimer->start(500);
 
     return app.exec();
 }

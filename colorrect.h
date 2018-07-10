@@ -26,7 +26,6 @@ SOFTWARE.
 
 #include <string>
 #include <QWidget>
-#include <QTimer>
 
 class ColorRect : public QWidget
 {
@@ -42,7 +41,6 @@ private:
     void setColor(std::string const&);
     std::vector<std::string> colorList;
     std::size_t              curColor;
-    QTimer                  *changeTimer;
 };
 
 #endif // COLORRECT_H
