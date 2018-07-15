@@ -10,6 +10,7 @@ find_package( Boost 1.67 REQUIRED COMPONENTS system )
 find_package( Qt5Widgets REQUIRED )
 
 add_compile_options( -Wall -Wextra -Werror )
+set( CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fno-omit-frame-pointer -D_LIBCPP_DEBUG=1" )
 
 # a simple generator
 add_executable( mg manual_generator.cpp )
@@ -27,6 +28,11 @@ QT5_WRAP_CPP( CR_MOC_SRC colorrect.h )
 add_executable( qb qt_basic.cpp ${CR_MOC_SRC} colorrect.cpp )
 target_compile_options( qb PUBLIC -stdlib=libc++ )
 target_link_libraries( qb Qt5::Widgets -stdlib=libc++ )
+
+# Qt with coroutines
+add_executable( qc qt_coro.cpp ${CR_MOC_SRC} colorrect.cpp )
+target_compile_options( qc PUBLIC -fcoroutines-ts -stdlib=libc++ )
+target_link_libraries( qc Qt5::Widgets -stdlib=libc++ )
 
 foreach( ex mg ba cb cac ac )
     target_compile_options( ${ex} PUBLIC -fcoroutines-ts -stdlib=libc++ -D_LIBCPP_DEBUG_=1 )
