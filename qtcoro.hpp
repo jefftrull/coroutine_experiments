@@ -98,17 +98,20 @@ struct return_object<void>::promise_base<void> {
     }
 };
 
-// We also need something to wrap
-template<typename Signaler, typename Args>
-struct awaitable_signal {
-    // deduce result type of co_await from Args
-    // for now it's the same type
-    // using result_t = Args;
-    using result_t = void;
-    // in the future: either void, Args, or std::tuple<...>
+template<typename F>
+struct member_fn_t;
 
-    template<typename A>
-    awaitable_signal(Signaler * src, void (Signaler::*method)(A))  // handle multiple later
+template<typename F>
+struct signal_args_t;
+
+// We also need something to wrap
+template<typename Signal>
+struct awaitable_signal {
+    using result_t = typename signal_args_t<Signal>::type;
+    using obj_t    = typename member_fn_t<Signal>::cls_t;
+    using args_t   = typename member_fn_t<Signal>::arglist_t;
+
+    awaitable_signal(obj_t * src, Signal method)  // handle multiple later
     {
         // hook up the signal to a custom-made function
         // that function should:
@@ -154,7 +157,7 @@ struct awaitable_signal {
             // such as storing the coroutine handle!
         }
 
-        void await_resume() noexcept {    // check on "noexcept"
+        result_t await_resume() noexcept {    // check on "noexcept"
             // We have been resumed, presumably because the signal we were waiting for has arrived
 
             // disconnect the signal here?
@@ -176,11 +179,10 @@ private:
 };
 
 // BOZO maybe use deduction guides?
-// BOZO deal with hidden parameter QPrivateSignal later
-template<typename S, typename A>
-awaitable_signal<S, A>
-make_awaitable_signal(S * t, void (S::*fn)(A)) {
-    return awaitable_signal<S, A>{t, fn};
+template<typename T, typename F>
+awaitable_signal<F>
+make_awaitable_signal(T * t, F fn) {
+    return awaitable_signal<F>{t, fn};
 }
 
 // deduce the type we want to return from co_await from the signal's signature
@@ -188,9 +190,6 @@ make_awaitable_signal(S * t, void (S::*fn)(A)) {
 // depending on how many parameters the signal has
 
 // BOZO create a utility metafunction file
-
-template<typename F>
-struct member_fn_t;
 
 template<typename C, typename... Args>
 struct member_fn_t<void (C::*)(Args...)> {
