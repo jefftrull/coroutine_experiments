@@ -31,6 +31,8 @@ SOFTWARE.
 #include <experimental/coroutine>
 #include <QObject>
 
+#include "meta.hpp"
+
 namespace qtcoro {
 
 // first, the type "returned" (more accurately, "supplied by the call expression") by our coroutines
@@ -97,9 +99,6 @@ struct return_object<void>::promise_base<void> {
         return std::experimental::suspend_always(); // ?? not sure
     }
 };
-
-template<typename F>
-struct member_fn_t;
 
 template<typename F>
 struct signal_args_t;
@@ -189,27 +188,6 @@ make_awaitable_signal(T * t, F fn) {
 // result of co_await should be void, one value, or a tuple of values
 // depending on how many parameters the signal has
 
-// BOZO create a utility metafunction file
-
-template<typename C, typename... Args>
-struct member_fn_t<void (C::*)(Args...)> {
-    using arglist_t = std::tuple<Args...>;
-    using cls_t = C;
-};
-
-
-// can I make everything from the base template?
-template<template<typename> class MF,
-         typename Tuple>
-struct apply_to_tuple;
-
-template<template<typename> class MF,
-         typename... Elements>
-struct apply_to_tuple<MF, std::tuple<Elements...>> {
-    using type = std::tuple<MF<Elements>...>;
-};
-
-
 // produce void or T for small tuples
 template<typename T>
 struct special_case_tuple {
@@ -226,26 +204,6 @@ struct special_case_tuple<std::tuple<T>> {
 template<>
 struct special_case_tuple<std::tuple<>> {
     using type = void;
-};
-
-template<template<typename> class Predicate,
-         typename Sequence>
-struct filter;
-
-template<template<typename> class Predicate,
-         typename Head,
-         typename... Elements>
-struct filter<Predicate, std::tuple<Head, Elements...>> {
-    using type=std::conditional_t<Predicate<Head>::value,
-                                  decltype(std::tuple_cat(std::declval<std::tuple<Head>>(),
-                                                          std::declval<typename filter<Predicate, std::tuple<Elements...>>::type>())),
-                                  std::tuple<Elements...>>;
-};
-
-// terminate recursion
-template<template<typename> class Predicate>
-struct filter<Predicate, std::tuple<>> {
-    using type = std::tuple<>;
 };
 
 template<typename T>
