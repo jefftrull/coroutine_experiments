@@ -24,11 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-// TODO support variable signal params
-// result of co_await should be void, one value, or a tuple of values
-// depending on how many parameters the signal has
-// how to make structured bindings compatible?
-
 #ifndef QTCORO_HPP
 #define QTCORO_HPP
 
@@ -188,7 +183,94 @@ make_awaitable_signal(S * t, void (S::*fn)(A)) {
     return awaitable_signal<S, A>{t, fn};
 }
 
+// deduce the type we want to return from co_await from the signal's signature
+// result of co_await should be void, one value, or a tuple of values
+// depending on how many parameters the signal has
 
+// BOZO create a utility metafunction file
+
+template<typename F>
+struct member_fn_t;
+
+template<typename C, typename... Args>
+struct member_fn_t<void (C::*)(Args...)> {
+    using arglist_t = std::tuple<Args...>;
+    using cls_t = C;
+};
+
+
+// can I make everything from the base template?
+template<template<typename> class MF,
+         typename Tuple>
+struct apply_to_tuple;
+
+template<template<typename> class MF,
+         typename... Elements>
+struct apply_to_tuple<MF, std::tuple<Elements...>> {
+    using type = std::tuple<MF<Elements>...>;
+};
+
+
+// produce void or T for small tuples
+template<typename T>
+struct special_case_tuple {
+    using type = T;
+};
+
+// just one type
+template<typename T>
+struct special_case_tuple<std::tuple<T>> {
+    using type = T;
+};
+
+// empty list
+template<>
+struct special_case_tuple<std::tuple<>> {
+    using type = void;
+};
+
+template<template<typename> class Predicate,
+         typename Sequence>
+struct filter;
+
+template<template<typename> class Predicate,
+         typename Head,
+         typename... Elements>
+struct filter<Predicate, std::tuple<Head, Elements...>> {
+    using type=std::conditional_t<Predicate<Head>::value,
+                                  decltype(std::tuple_cat(std::declval<std::tuple<Head>>(),
+                                                          std::declval<typename filter<Predicate, std::tuple<Elements...>>::type>())),
+                                  std::tuple<Elements...>>;
+};
+
+// terminate recursion
+template<template<typename> class Predicate>
+struct filter<Predicate, std::tuple<>> {
+    using type = std::tuple<>;
+};
+
+template<typename T>
+using not_empty = std::negation<std::is_empty<T>>;
+
+template<typename Sequence>
+struct filter_empty_types {
+    using type = typename filter<not_empty, Sequence>::type;
+};
+
+
+// remarkably decltype(&T::M) does just fine, I don't know why
+template<typename F>
+struct signal_args_t {
+    // get argument list
+    using args_t = typename member_fn_t<F>::arglist_t;
+    using classname_t = typename member_fn_t<F>::cls_t;
+    // remove any QPrivateSignal parameters from the end
+    using no_empty_t = typename filter_empty_types<args_t>::type;
+    // apply std::decay_t to all arg types
+    using decayed_args_t = typename apply_to_tuple<std::decay_t, no_empty_t>::type;
+    // special case 0 and 1 argument
+    using type = typename special_case_tuple<decayed_args_t>::type;
+};
 
 }
 
