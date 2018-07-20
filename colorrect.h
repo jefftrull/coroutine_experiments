@@ -37,6 +37,12 @@ public:
 public slots:
     void changeColor();
 
+signals:
+    void click(QPointF);
+
+protected:
+    void mousePressEvent(QMouseEvent *) override;
+
 private:
     void setColor(std::string const&);
     std::vector<std::string> colorList;

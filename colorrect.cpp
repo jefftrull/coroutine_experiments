@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#include <QMouseEvent>
+
 #include "colorrect.h"
 
 ColorRect::ColorRect(QWidget *parent) :
@@ -52,3 +54,8 @@ ColorRect::changeColor()
     setColor(colorList[curColor]);
 }
 
+void
+ColorRect::mousePressEvent(QMouseEvent *e)
+{
+    emit click(e->windowPos());
+}
