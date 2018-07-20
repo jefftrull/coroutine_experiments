@@ -1,6 +1,5 @@
 // classes for using coroutines with Qt signals and slots
 // The goal: from within a slot, co_await on a one-shot signal
-// fine if that code is inside a lambda or whatever
 
 /*
 Copyright (c) 2018 Jeff Trull <edaskel@att.net>
@@ -35,7 +34,11 @@ SOFTWARE.
 
 namespace qtcoro {
 
-// first, the type "returned" (more accurately, "supplied by the call expression") by our coroutines
+//
+// Special TS-required types
+//
+
+// first, the type "returned" by (more accurately, "supplied by the call expression from") our coroutines
 template<typename T=void>
 struct return_object {
     struct promise_type;
@@ -77,6 +80,7 @@ struct return_object {
         }
 
         // either return_void or return_value will exist, depending on T
+        // we inherit it from promise_base
 
         return_object get_return_object() {
             return return_object(*this);
@@ -86,12 +90,12 @@ struct return_object {
 
     };
 
-
 private:
     std::experimental::coroutine_handle<promise_type> m_coro;
 
 };
 
+// that specialization for void values
 template<>
 template<>
 struct return_object<void>::promise_base<void> {
@@ -100,41 +104,41 @@ struct return_object<void>::promise_base<void> {
     }
 };
 
-// OK, in order to produce a slot with the right signature I need to specialize
+//
+// Slot "factory"
+// Gives us something to connect() signals to, that integrates with coroutines
+//
 
 template<typename Result, typename... Args>
 struct make_slot;
 
-// two or more arguments - we will have derived a std::tuple for the result
+// for two or more arguments we supply a std::tuple from the awaiter
 template<typename... Args>
-struct make_slot<std::tuple<Args...>, Args...>
-{
+struct make_slot<std::tuple<Args...>, Args...> {
     using Result = std::tuple<Args...>;
     auto operator()(QMetaObject::Connection& signal_conn,
                     Result& result,
-                    std::experimental::coroutine_handle<>& coro_handle)
-    {
+                    std::experimental::coroutine_handle<>& coro_handle) {
         return [&signal_conn, &coro_handle, &result]
-            (Args... a)
-        {
+            (Args... a) {
+            // all our awaits are one-shot, so we immediately disconnect
             QObject::disconnect(signal_conn);
+            // put the result where the awaiter can supply it from await_resume()
             result = std::make_tuple(a...);
+            // resume execution inside the coroutine at the co_await
             coro_handle.resume();
         };
     }
 };
 
-// a single argument - result is the same
+// for a single argument it's just that particular type
 template<typename Arg>
-struct make_slot<Arg, Arg>
-{
+struct make_slot<Arg, Arg> {
     auto operator()(QMetaObject::Connection& signal_conn,
                     Arg& result,
-                    std::experimental::coroutine_handle<>& coro_handle)
-    {
+                    std::experimental::coroutine_handle<>& coro_handle) {
         return [&signal_conn, &coro_handle, &result]
-            (Arg a)
-        {
+            (Arg a) {
             QObject::disconnect(signal_conn);
             result = a;
             coro_handle.resume();
@@ -147,28 +151,28 @@ template<>
 struct make_slot<void>
 {
     auto operator()(QMetaObject::Connection& signal_conn,
-                    std::experimental::coroutine_handle<>& coro_handle)
-    {
-        return [&signal_conn, &coro_handle]
-            ()
-        {
+                    std::experimental::coroutine_handle<>& coro_handle) {
+        return [&signal_conn, &coro_handle]() {
             QObject::disconnect(signal_conn);
             coro_handle.resume();
         };
     }
 };
 
-// special base to deal with nullary signals
+//
+// Awaitable class
+//
+
+// first, a special base to handle possibly nullary signals
 template<typename Derived, typename Result>
-struct awaitable_signal_base
-{
+struct awaitable_signal_base {
     // not nullary - we have a real value to set when the signal arrives
     template<typename Object, typename... Args>
     awaitable_signal_base(Object* src, void (Object::*method)(Args...),
-                          std::experimental::coroutine_handle<>& coro_handle)
-    {
-        signal_conn_ = QObject::connect(src, method,
-                                        make_slot<Result, Args...>()(signal_conn_, derived()->signal_args_, coro_handle));
+                          std::experimental::coroutine_handle<>& coro_handle) {
+        signal_conn_ =
+            QObject::connect(src, method,
+                             make_slot<Result, Args...>()(signal_conn_, derived()->signal_args_, coro_handle));
 
     }
 
@@ -180,49 +184,43 @@ protected:
 };
 
 template<typename Derived>
-struct awaitable_signal_base<Derived, void>
-{
+struct awaitable_signal_base<Derived, void> {
     // nullary, i.e., no arguments to signal and nothing to supply to co_await
     template<typename Object, typename... Args>
     awaitable_signal_base(Object* src, void (Object::*method)(Args...),
-                          std::experimental::coroutine_handle<>& coro_handle)
-    {
+                          std::experimental::coroutine_handle<>& coro_handle) {
+        // hook up the slot version that doesn't try to store signal args
         signal_conn_ = QObject::connect(src, method,
                                         make_slot<void>()(signal_conn_, coro_handle));
     }
 
 protected:
     QMetaObject::Connection signal_conn_;
-
+    // no need to store signal arguments since there are none
 };
 
 
+// forward reference for our "signal args -> co_await result" TMP code
 template<typename F>
 struct signal_args_t;
 
-// We also need something to wrap
+// The rest of our awaitable
 template<typename Signal, typename Result = typename signal_args_t<Signal>::type>
 struct awaitable_signal : awaitable_signal_base<awaitable_signal<Signal, Result>, Result> {
     using obj_t    = typename member_fn_t<Signal>::cls_t;
 
     awaitable_signal(obj_t * src, Signal method)
-        : awaitable_signal_base<awaitable_signal, Result>(src, method, coro_handle_)
-    {
-        // TODO lifetime issues?
-    }
+        : awaitable_signal_base<awaitable_signal, Result>(src, method, coro_handle_) {}
 
-    struct awaiter
-    {
+    struct awaiter {
         awaiter(awaitable_signal * awaitable) : awaitable_(awaitable) {}
 
-        bool await_ready() const noexcept
-        {
+        bool await_ready() const noexcept {
             return false;  // we are waiting for the signal to arrive
         }
 
         template<typename P>
-        void await_suspend(std::experimental::coroutine_handle<P> handle) noexcept
-        {
+        void await_suspend(std::experimental::coroutine_handle<P> handle) noexcept {
             // we have now been suspended but are able to do something before
             // returning to caller-or-resumer
             // such as storing the coroutine handle!
@@ -231,18 +229,13 @@ struct awaitable_signal : awaitable_signal_base<awaitable_signal<Signal, Result>
 
         template<typename R = Result>
         typename std::enable_if_t<!std::is_same_v<R, void>, R>
-        await_resume() noexcept
-        {
-            // TODO what goes here?
+        await_resume() noexcept {
             return awaitable_->signal_args_;
         }
 
         template<typename R = Result>
         typename std::enable_if_t<std::is_same_v<R, void>, void>
-        await_resume() noexcept
-        {
-            // what goes here?
-        }
+        await_resume() noexcept {}
 
     private:
         awaitable_signal* awaitable_;
@@ -256,7 +249,6 @@ private:
 
 };
 
-// BOZO maybe use deduction guides?
 template<typename T, typename F>
 awaitable_signal<F>
 make_awaitable_signal(T * t, F fn) {
@@ -289,6 +281,11 @@ struct special_case_tuple<std::tuple<>> {
     using type = void;
 };
 
+//
+// Use a simple predicate and the filter metafunction
+// to make a list of non-empty types
+//
+
 template<typename T>
 using not_empty = std::negation<std::is_empty<T>>;
 
@@ -304,7 +301,7 @@ struct signal_args_t {
     // get argument list
     using args_t = typename member_fn_t<F>::arglist_t;
     using classname_t = typename member_fn_t<F>::cls_t;
-    // remove any QPrivateSignal parameters from the end
+    // remove any empty (including "QPrivateSignal") parameters from the list
     using no_empty_t = typename filter_empty_types<args_t>::type;
     // apply std::decay_t to all arg types
     using decayed_args_t = typename apply_to_tuple<std::decay_t, no_empty_t>::type;
