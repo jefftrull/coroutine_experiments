@@ -1,5 +1,5 @@
 // example use of the Coroutines TS with Qt signals and slots
-// intended to be a version of qt_basic.cpp but using coroutines
+// This is qt_basic.cpp ported to use coroutines
 /*
 Copyright (c) 2018 Jeff Trull <edaskel@att.net>
 
@@ -47,6 +47,15 @@ int main(int argc, char *argv[])
     }();
 
     changeTimer->start(500);
+
+    // draw lines from clicks
+    auto ptclick_ro = [&]() -> qtcoro::return_object<> {
+        while (true) {
+            QPointF first_point = co_await qtcoro::make_awaitable_signal(&cr, &ColorRect::click);
+            QPointF second_point = co_await qtcoro::make_awaitable_signal(&cr, &ColorRect::click);
+            cr.setLine(first_point, second_point);
+        }
+    }();
 
     return app.exec();
 }

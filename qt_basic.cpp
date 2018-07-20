@@ -1,5 +1,5 @@
 // Implementation of simple Qt example
-// Coroutine-based implementation to follow
+// cycles through background colors while display user-input lines
 /*
 Copyright (c) 2018 Jeff Trull <edaskel@att.net>
 
@@ -41,6 +41,21 @@ int main(int argc, char *argv[])
     QObject::connect(changeTimer, &QTimer::timeout,
                      [&]() { cr.changeColor(); });
     changeTimer->start(500);
+
+    // draw lines from clicks
+    bool got_first_point{false};
+    QPointF first_point;
+
+    QObject::connect(&cr, &ColorRect::click, [&](QPointF p) {
+        if (got_first_point) {
+            // draw
+            cr.setLine(first_point, p);
+            got_first_point = false;
+        } else {
+            first_point = p;
+            got_first_point = true;
+        }
+    });
 
     return app.exec();
 }

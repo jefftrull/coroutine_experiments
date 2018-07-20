@@ -22,6 +22,7 @@ SOFTWARE.
 */
 
 #include <QMouseEvent>
+#include <QPainter>
 
 #include "colorrect.h"
 
@@ -58,4 +59,20 @@ void
 ColorRect::mousePressEvent(QMouseEvent *e)
 {
     emit click(e->windowPos());
+}
+
+void
+ColorRect::paintEvent(QPaintEvent *)
+{
+    if (line) {
+        QPainter painter(this);
+        painter.setPen(QPen{QColor{"yellow"}});
+        painter.drawLine(*line);
+    }
+}
+
+void
+ColorRect::setLine(QPointF p1, QPointF p2)
+{
+    line = QLineF{p1, p2};
 }

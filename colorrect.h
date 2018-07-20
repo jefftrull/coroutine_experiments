@@ -24,8 +24,10 @@ SOFTWARE.
 #ifndef COLORRECT_H
 #define COLORRECT_H
 
+#include <optional>
 #include <string>
 #include <QWidget>
+#include <QLine>
 
 class ColorRect : public QWidget
 {
@@ -36,17 +38,20 @@ public:
 
 public slots:
     void changeColor();
+    void setLine(QPointF, QPointF);
 
 signals:
     void click(QPointF);
 
 protected:
     void mousePressEvent(QMouseEvent *) override;
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     void setColor(std::string const&);
     std::vector<std::string> colorList;
     std::size_t              curColor;
+    std::optional<QLineF>    line;
 };
 
 #endif // COLORRECT_H
