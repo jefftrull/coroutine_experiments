@@ -100,42 +100,115 @@ struct return_object<void>::promise_base<void> {
     }
 };
 
+// OK, in order to produce a slot with the right signature I need to specialize
+
+template<typename Result, typename... Args>
+struct make_slot;
+
+// two or more arguments - we will have derived a std::tuple for the result
+template<typename... Args>
+struct make_slot<std::tuple<Args...>, Args...>
+{
+    using Result = std::tuple<Args...>;
+    auto operator()(QMetaObject::Connection& signal_conn,
+                    Result& result,
+                    std::experimental::coroutine_handle<>& coro_handle)
+    {
+        return [&signal_conn, &coro_handle, &result]
+            (Args... a)
+        {
+            QObject::disconnect(signal_conn);
+            result = std::make_tuple(a...);
+            coro_handle.resume();
+        };
+    }
+};
+
+// a single argument - result is the same
+template<typename Arg>
+struct make_slot<Arg, Arg>
+{
+    auto operator()(QMetaObject::Connection& signal_conn,
+                    Arg& result,
+                    std::experimental::coroutine_handle<>& coro_handle)
+    {
+        return [&signal_conn, &coro_handle, &result]
+            (Arg a)
+        {
+            QObject::disconnect(signal_conn);
+            result = a;
+            coro_handle.resume();
+        };
+    }
+};
+
+// no argument - result is void, don't set anything
+template<>
+struct make_slot<void>
+{
+    auto operator()(QMetaObject::Connection& signal_conn,
+                    std::experimental::coroutine_handle<>& coro_handle)
+    {
+        return [&signal_conn, &coro_handle]
+            ()
+        {
+            QObject::disconnect(signal_conn);
+            coro_handle.resume();
+        };
+    }
+};
+
+// special base to deal with nullary signals
+template<typename Derived, typename Result>
+struct awaitable_signal_base
+{
+    // not nullary - we have a real value to set when the signal arrives
+    template<typename Object, typename... Args>
+    awaitable_signal_base(Object* src, void (Object::*method)(Args...),
+                          std::experimental::coroutine_handle<>& coro_handle)
+    {
+        signal_conn_ = QObject::connect(src, method,
+                                        make_slot<Result, Args...>()(signal_conn_, derived()->signal_args_, coro_handle));
+
+    }
+
+    Derived * derived() { return static_cast<Derived*>(this); }
+
+protected:
+    Result signal_args_;
+    QMetaObject::Connection signal_conn_;
+};
+
+template<typename Derived>
+struct awaitable_signal_base<Derived, void>
+{
+    // nullary, i.e., no arguments to signal and nothing to supply to co_await
+    template<typename Object, typename... Args>
+    awaitable_signal_base(Object* src, void (Object::*method)(Args...),
+                          std::experimental::coroutine_handle<>& coro_handle)
+    {
+        signal_conn_ = QObject::connect(src, method,
+                                        make_slot<void>()(signal_conn_, coro_handle));
+    }
+
+protected:
+    QMetaObject::Connection signal_conn_;
+
+};
+
+
 template<typename F>
 struct signal_args_t;
 
 // We also need something to wrap
-template<typename Signal>
-struct awaitable_signal {
-    using result_t = typename signal_args_t<Signal>::type;
+template<typename Signal, typename Result = typename signal_args_t<Signal>::type>
+struct awaitable_signal : awaitable_signal_base<awaitable_signal<Signal, Result>, Result> {
     using obj_t    = typename member_fn_t<Signal>::cls_t;
-    using args_t   = typename member_fn_t<Signal>::arglist_t;
 
-    awaitable_signal(obj_t * src, Signal method)  // handle multiple later
+    awaitable_signal(obj_t * src, Signal method)
+        : awaitable_signal_base<awaitable_signal, Result>(src, method, coro_handle_)
     {
-        // hook up the signal to a custom-made function
-        // that function should:
-        // - do whatever is required to maintain our lifetime
-        signal_conn_ = QObject::connect(src, method,
-                                        [=]() {   // need a different signature for void!
-                                            // disconnect the signal
-                                            QObject::disconnect(signal_conn_);
-                                            // arrange to deliver args to co_await caller
-                                            // get them from awaitable_
-
-                                            // we must lifetime extend in this lambda
-                                            // or do we? Storing coro handle may be enough
-                                            // OK but... when we create this closure the coro handle is unknown
-                                            // we have "this"
-
-                                            // resume
-                                            coro_handle_.resume();
-
-                                            // when we get here, either we hit another co_await or the
-                                            // original coroutine has completed
-                                            // that's what is meant by resumer-or-caller
-                                            // we are the resumer, the original code is the caller
-                                            // I think...
-                                        });
+        // TODO lifetime issues?
     }
 
     struct awaiter
@@ -150,21 +223,28 @@ struct awaitable_signal {
         template<typename P>
         void await_suspend(std::experimental::coroutine_handle<P> handle) noexcept
         {
-            awaitable_->coro_handle_ = handle;    // store for later resumption
             // we have now been suspended but are able to do something before
             // returning to caller-or-resumer
             // such as storing the coroutine handle!
+            awaitable_->coro_handle_ = handle;    // store for later resumption
         }
 
-        result_t await_resume() noexcept {    // check on "noexcept"
-            // We have been resumed, presumably because the signal we were waiting for has arrived
-
-            // disconnect the signal here?
-
-            // and now we resume
-
+        template<typename R = Result>
+        typename std::enable_if_t<!std::is_same_v<R, void>, R>
+        await_resume() noexcept
+        {
+            // TODO what goes here?
+            return awaitable_->signal_args_;
         }
 
+        template<typename R = Result>
+        typename std::enable_if_t<std::is_same_v<R, void>, void>
+        await_resume() noexcept
+        {
+            // what goes here?
+        }
+
+    private:
         awaitable_signal* awaitable_;
 
     };
@@ -172,7 +252,6 @@ struct awaitable_signal {
     awaiter operator co_await () { return awaiter{this}; }
 
 private:
-    QMetaObject::Connection signal_conn_;
     std::experimental::coroutine_handle<> coro_handle_;
 
 };
@@ -183,6 +262,10 @@ awaitable_signal<F>
 make_awaitable_signal(T * t, F fn) {
     return awaitable_signal<F>{t, fn};
 }
+
+//
+// some light metaprogramming
+//
 
 // deduce the type we want to return from co_await from the signal's signature
 // result of co_await should be void, one value, or a tuple of values
@@ -214,8 +297,8 @@ struct filter_empty_types {
     using type = typename filter<not_empty, Sequence>::type;
 };
 
+// now put it all together:
 
-// remarkably decltype(&T::M) does just fine, I don't know why
 template<typename F>
 struct signal_args_t {
     // get argument list
