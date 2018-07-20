@@ -42,6 +42,7 @@ public slots:
 
 signals:
     void click(QPointF);
+    void lineCreated(QPointF, QPointF);
 
 protected:
     void mousePressEvent(QMouseEvent *) override;

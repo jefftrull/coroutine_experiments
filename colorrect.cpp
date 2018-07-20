@@ -75,4 +75,5 @@ void
 ColorRect::setLine(QPointF p1, QPointF p2)
 {
     line = QLineF{p1, p2};
+    emit lineCreated(p1, p2);
 }
