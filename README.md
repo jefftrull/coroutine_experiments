@@ -1,5 +1,5 @@
 # My Coroutine Experiments
-This repo contains the results of some experiments using the Coroutines TS both by itself and with libraries like Boost.Asio and Qt, to help me better understand its capabilities.
+This repo contains the results of some experiments using the Coroutines TS - both by itself, and with libraries like Boost.Asio and Qt, to help me better understand its capabilities.
 
 With the exception of the Qt examples I implemented a really basic coroutine using an integer multiply as an example "asynchronous" task. We wait for it to asynchronously execute and then complete the computation by adding another integer. I figured out the necessary infrastructure (awaitable and promise types) necessary to get this working in each case.
 
