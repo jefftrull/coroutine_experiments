@@ -60,10 +60,10 @@ int main(int argc, char *argv[])
     // listen for line creation (tests the tuple code)
     auto line_ro = [&]() -> qtcoro::return_object<> {
         while (true) {
-            std::tuple<QPointF, QPointF> line = co_await qtcoro::make_awaitable_signal(&cr, &ColorRect::lineCreated);
+            auto [p1, p2] = co_await qtcoro::make_awaitable_signal(&cr, &ColorRect::lineCreated);
             std::cout << "we drew a line from (";
-            std::cout << std::get<0>(line).x() << ", " << std::get<0>(line).y() << ") to (";
-            std::cout << std::get<1>(line).x() << ", " << std::get<1>(line).y() << ")\n";
+            std::cout << p1.x() << ", " << p1.y() << ") to (";
+            std::cout << p2.x() << ", " << p2.y() << ")\n";
         }
     }();
 
