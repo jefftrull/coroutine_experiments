@@ -57,9 +57,7 @@ struct my_return {
             return std::experimental::suspend_always(); // ?? not sure
         }
 
-        auto return_void() const noexcept {
-            return std::experimental::suspend_always(); // ?? not sure
-        }
+        void return_void() const noexcept {}
 
         my_return get_return_object() {
             return my_return(*this);

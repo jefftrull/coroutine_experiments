@@ -49,8 +49,7 @@ struct await_return_object {
     // not even if one is SFINAEd out - you cannot have both names present, per Lewis Baker
     template<typename U>
     struct promise_base {
-        auto return_value(U const&) const noexcept {
-            return std::experimental::suspend_always(); // ?? not sure
+        void return_value(U const&) const noexcept {
         }
     };
 
@@ -86,8 +85,7 @@ private:
 template<>
 template<>
 struct await_return_object<void>::promise_base<void> {
-    auto return_void() const noexcept {
-        return std::experimental::suspend_always(); // ?? not sure
+    void return_void() const noexcept {
     }
 };
 

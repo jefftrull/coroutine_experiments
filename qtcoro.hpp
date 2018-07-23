@@ -62,8 +62,7 @@ struct return_object {
     // So this is the fix: we specialize the base and inherit
     template<typename U>
     struct promise_base {
-        auto return_value(U const&) const noexcept {
-            return std::experimental::suspend_always(); // ?? not sure
+        void return_value(U const&) const noexcept {
         }
     };
     // void specialization to replace with return_void() is below at namespace scope
@@ -99,8 +98,7 @@ private:
 template<>
 template<>
 struct return_object<void>::promise_base<void> {
-    auto return_void() const noexcept {
-        return std::experimental::suspend_always(); // ?? not sure
+    void return_void() const noexcept {
     }
 };
 
