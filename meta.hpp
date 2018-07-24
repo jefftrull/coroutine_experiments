@@ -70,7 +70,7 @@ struct filter<Predicate, std::tuple<Head, Elements...>> {
     using type=std::conditional_t<Predicate<Head>::value,
                                   decltype(std::tuple_cat(std::declval<std::tuple<Head>>(),
                                                           std::declval<typename filter<Predicate, std::tuple<Elements...>>::type>())),
-                                  std::tuple<Elements...>>;
+                                  typename filter<Predicate, std::tuple<Elements...>>::type>;
 };
 
 // terminate recursion
