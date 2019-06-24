@@ -42,7 +42,7 @@ namespace this_coro = boost::asio::this_coro;
 
 awaitable<int> multiply(int x, int y) {
     // arbitrary async operation so we suspend and resume from the run queue
-    auto token = co_await this_coro::executor_t::executor_t();
+    auto token = co_await this_coro::executor_t();
     boost::asio::steady_timer t(token,
                                 boost::asio::chrono::milliseconds(50));
     co_await t.async_wait(boost::asio::use_awaitable);  // suspend and run something else
