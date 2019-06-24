@@ -11,6 +11,10 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 set( CMAKE_CXX_STANDARD 17 )
 
 # dependencies
+if ( MSVC )
+    # default prebuilt boost installation directory
+    set( BOOST_ROOT "c:/local/boost_1_70_0" )
+endif()
 find_package( Boost 1.70 COMPONENTS system )
 find_package( Qt5Widgets REQUIRED )
 
@@ -56,6 +60,12 @@ if (${Boost_FOUND})
     add_executable( ac asio_coro.cpp )
     target_compile_options( ac PUBLIC ${WITH_COROUTINES} )
     target_link_libraries( ac PRIVATE Boost::boost Threads::Threads Boost::system )
+    if ( MSVC )
+        # work around packaging glitches in official prebuilt boost packages
+        target_link_directories( ac PRIVATE $<IF:$<CONFIG:Debug>,${Boost_LIBRARY_DIR_DEBUG},${Boost_LIBRARY_DIR_RELEASE}> )
+        # silence deprecated allocator warnings originating in Boost headers
+        target_compile_definitions( ac PRIVATE _SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING )
+    endif()
 else()
     message( WARNING "Boost not found; Asio example will not be built" )
 endif()
