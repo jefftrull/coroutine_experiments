@@ -33,3 +33,6 @@
 
 # Emacs backup files
 *~
+
+# Qt Creator user's project settings
+CMakeLists.txt.user
