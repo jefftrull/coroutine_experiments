@@ -54,6 +54,12 @@ struct await_return_object {
     };
 
     // void specialization to replace with return_void() is below at namespace scope
+#ifdef INTERNAL_VOID_SPECIALIZATION
+    template<>
+    struct promise_base<void> {
+        void return_void() const noexcept {}
+    };
+#endif // INTERNAL_VOID_SPECIALIZATION
 
     struct promise_type : promise_base<T> {
         // coroutine promise requirements:
@@ -82,11 +88,13 @@ private:
 
 };
 
+#ifndef INTERNAL_VOID_SPECIALIZATION
 template<>
 template<>
 struct await_return_object<void>::promise_base<void> {
     void return_void() const noexcept {
     }
 };
+#endif // INTERNAL_VOID_SPECIALIZATION
 
 #endif // CO_AWAITER_HPP

@@ -23,6 +23,9 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     add_compile_options( /W4 /WX )
     set( WITH_COROUTINES /await )
+    if ( MSVC_VERSION LESS 1920 )
+        add_compile_definitions( INTERNAL_VOID_SPECIALIZATION )
+    endif()
 endif()
 
 # a simple generator
