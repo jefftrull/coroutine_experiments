@@ -36,3 +36,6 @@
 
 # Qt Creator user's project settings
 CMakeLists.txt.user
+
+# Build folder from the README
+build/
