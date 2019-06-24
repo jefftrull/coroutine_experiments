@@ -7,9 +7,17 @@ The Qt examples are a bit more complex and involve coroutines that use 0, 1, and
 
 ## To Build
 
-It's the usual CMake flow, but your compiler needs to be a recent Clang:
+It's the usual CMake flow, but your compiler needs to be a recent Clang or MSVC 2017+:
 
-`mkdir build;cd build;cmake -DCMAKE_CXX_COMPILER=/path/to/clang++ ..`
+    mkdir build; cd build; cmake ..
 
-It should be possible to port this to MSVC with only a few changes, if anyone wants to try it.
+Common options to cmake:
+
+- Path to the compiler, usually needed for clang: `-DCMAKE_CXX_COMPILER=/path/to/clang++`
+
+- Building a release build with debug information: `-DCMAKE_BUILD_TYPE=relwithdebinfo`
+
+It is not necessary to pass the path to the MSVC compiler usually, but the build has to start
+from the Visual Studio Command Line.
+
 gcc does not support coroutines at this time.

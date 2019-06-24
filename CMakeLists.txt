@@ -1,4 +1,9 @@
 cmake_minimum_required( VERSION 3.5.0 )
+if ( ${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.15.0 )
+    # Do not insert "/W3" by default into MSVC compile options.
+    # This quietens warning level override warnings
+    cmake_policy( SET CMP0092 NEW )
+endif()
 
 # create compile_commands.json for tools
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
@@ -9,8 +14,16 @@ set( CMAKE_CXX_STANDARD 17 )
 find_package( Boost 1.67 COMPONENTS system )
 find_package( Qt5Widgets REQUIRED )
 
-add_compile_options( -Wall -Wextra -Werror )
-set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_LIBCPP_DEBUG=1" )
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    add_compile_options( -Wall -Wextra -Werror )
+    add_compile_options( -stdlib=libc++ )
+    add_link_options( -stdlib=libc++ )
+    set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_LIBCPP_DEBUG=1" )
+    set( WITH_COROUTINES -fcoroutines-ts )
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    add_compile_options( /W4 /WX )
+    set( WITH_COROUTINES /await )
+endif()
 
 # a simple generator
 add_executable( mg manual_generator.cpp )
@@ -24,25 +37,22 @@ add_executable( cac cb_as_coro.cpp )
 # Qt basic example, no coroutines
 QT5_WRAP_CPP( CR_MOC_SRC colorrect.h )
 add_executable( qb qt_basic.cpp ${CR_MOC_SRC} colorrect.cpp )
-target_compile_options( qb PUBLIC -stdlib=libc++ )
-target_link_libraries( qb Qt5::Widgets -stdlib=libc++ )
+target_link_libraries( qb Qt5::Widgets )
 
 # Qt with coroutines
 add_executable( qc qt_coro.cpp ${CR_MOC_SRC} colorrect.cpp )
-target_compile_options( qc PUBLIC -fcoroutines-ts -stdlib=libc++ )
-target_link_libraries( qc Qt5::Widgets -stdlib=libc++ )
+target_link_libraries( qc Qt5::Widgets )
 
-foreach( ex mg ba cb cac )
-    target_compile_options( ${ex} PUBLIC -fcoroutines-ts -stdlib=libc++ -D_LIBCPP_DEBUG_=1 )
-    target_link_libraries( ${ex} PUBLIC -stdlib=libc++ )
+foreach( target mg ba cb cac qc )
+    target_compile_options( ${target} PUBLIC ${WITH_COROUTINES} )
 endforeach()
 
 if (${Boost_FOUND})
     # Asio as the execution queue *and* co_await
     find_package( Threads REQUIRED )
     add_executable( ac asio_coro.cpp )
-    target_compile_options( ac PUBLIC -fcoroutines-ts -stdlib=libc++ -D_LIBCPP_DEBUG_=1 )
-    target_link_libraries( ac PUBLIC -stdlib=libc++ PRIVATE Boost::boost Threads::Threads Boost::system )
+    target_compile_options( ac PUBLIC ${WITH_COROUTINES} )
+    target_link_libraries( ac PRIVATE Boost::boost Threads::Threads Boost::system )
 else()
     message( WARNING "Boost not found; Asio example will not be built" )
 endif()
