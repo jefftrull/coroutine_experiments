@@ -28,7 +28,7 @@ SOFTWARE.
 #include <type_traits>
 
 template<typename F,
-         typename ReturnType = typename std::remove_cv_t<std::result_of_t<F()>>>
+         typename ReturnType = typename std::remove_cv_t<std::invoke_result_t<F>>>
 struct my_awaitable {
     // construct with a nullary function that does something and returns a value
     my_awaitable(F work_fn) : work_(work_fn) {}

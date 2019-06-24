@@ -30,24 +30,22 @@ SOFTWARE.
 #include <iostream>
 
 #include <experimental/coroutine>
-#include <boost/asio/experimental/co_spawn.hpp>
+#include <boost/asio/co_spawn.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <boost/asio/use_awaitable.hpp>
 
-using boost::asio::experimental::co_spawn;
-namespace this_coro = boost::asio::experimental::this_coro;
+using boost::asio::awaitable;
+using boost::asio::co_spawn;
 using boost::asio::io_context;
-
-template <typename T>
-  using awaitable = boost::asio::experimental::awaitable<
-    T, boost::asio::io_context::executor_type>;
+namespace this_coro = boost::asio::this_coro;
 
 awaitable<int> multiply(int x, int y) {
     // arbitrary async operation so we suspend and resume from the run queue
-    auto token = co_await this_coro::token();
-    boost::asio::steady_timer t(token.get_executor().context(),
+    auto token = co_await this_coro::executor_t::executor_t();
+    boost::asio::steady_timer t(token,
                                 boost::asio::chrono::milliseconds(50));
-    co_await t.async_wait(token);  // suspend and run something else
+    co_await t.async_wait(boost::asio::use_awaitable);  // suspend and run something else
     co_return x * y;
 }
 
