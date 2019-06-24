@@ -13,7 +13,7 @@ set( CMAKE_CXX_STANDARD 17 )
 # dependencies
 if ( MSVC )
     # default prebuilt boost installation directory
-    set( BOOST_ROOT "c:/local/boost_1_70_0" )
+    set( BOOST_ROOT "c:/local/boost_1_70_0" CACHE PATH "Path to the boost install directory.")
 endif()
 find_package( Boost 1.70 COMPONENTS system )
 find_package( Qt5Widgets REQUIRED )

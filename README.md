@@ -15,9 +15,14 @@ Common options to cmake:
 
 - Path to the compiler, usually needed for clang: `-DCMAKE_CXX_COMPILER=/path/to/clang++`
 
+- Path to Boost - needed when Boost is in a less-than-usual location: `-DBOOST_ROOT=/path/to/boost_install`. This variable is cached and needs to be given only once per build location.
+
 - Building a release build with debug information: `-DCMAKE_BUILD_TYPE=relwithdebinfo`
 
-It is not necessary to pass the path to the MSVC compiler usually, but the build has to start
-from the Visual Studio Command Line.
+### Platform Notes
 
-gcc does not support coroutines at this time.
+- It is not necessary to pass the path to the MSVC compiler, but the build has to start from the Visual Studio Command Line.
+
+- No additional cmake options are needed on macOS. Once macPorts updates their boost to 1.77.0, it will be detected by the build and used.
+
+- gcc does not support coroutines at this time.
