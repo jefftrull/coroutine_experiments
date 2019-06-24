@@ -11,7 +11,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 set( CMAKE_CXX_STANDARD 17 )
 
 # dependencies
-find_package( Boost 1.67 COMPONENTS system )
+find_package( Boost 1.70 COMPONENTS system )
 find_package( Qt5Widgets REQUIRED )
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
