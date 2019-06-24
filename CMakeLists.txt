@@ -10,7 +10,7 @@ find_package( Boost 1.67 COMPONENTS system )
 find_package( Qt5Widgets REQUIRED )
 
 add_compile_options( -Wall -Wextra -Werror )
-set( CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fno-omit-frame-pointer -D_LIBCPP_DEBUG=1" )
+set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_LIBCPP_DEBUG=1" )
 
 # a simple generator
 add_executable( mg manual_generator.cpp )
