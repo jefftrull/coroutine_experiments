@@ -39,9 +39,10 @@ endforeach()
 
 if (${Boost_FOUND})
     # Asio as the execution queue *and* co_await
+    find_package( Threads REQUIRED )
     add_executable( ac asio_coro.cpp )
     target_compile_options( ac PUBLIC -fcoroutines-ts -stdlib=libc++ -D_LIBCPP_DEBUG_=1 )
-    target_link_libraries( ac PUBLIC -stdlib=libc++ PRIVATE Boost::boost pthread Boost::system )
+    target_link_libraries( ac PUBLIC -stdlib=libc++ PRIVATE Boost::boost Threads::Threads Boost::system )
 else()
     message( WARNING "Boost not found; Asio example will not be built" )
 endif()
