@@ -1,4 +1,7 @@
 cmake_minimum_required( VERSION 3.5.0 )
+
+project( coroutine_experiments )
+
 if ( ${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.15.0 )
     # Do not insert "/W3" by default into MSVC compile options.
     # This quietens warning level override warnings
