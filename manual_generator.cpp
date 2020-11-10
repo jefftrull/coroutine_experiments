@@ -95,6 +95,11 @@ struct my_return {
         m_coro.resume();
     }
 
+    ~my_return() {
+        if (m_coro)
+            m_coro.destroy();
+    }
+
 private:
     std::experimental::coroutine_handle<promise_type> m_coro;
 };
