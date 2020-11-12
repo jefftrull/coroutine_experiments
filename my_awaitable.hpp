@@ -59,6 +59,11 @@ struct my_awaitable {
             // See https://lewissbaker.github.io/2020/05/11/understanding_symmetric_transfer
             // for a detailed explanation.
 
+            // Alternatively, with "symmetric transfer" (P0913R0) we can return a coroutine_handle<>
+            // from this method and the compiler will arrange for a tail call like transfer
+            // of control. No new stack frame is created, and it's thread-safe too:
+            // return coro;
+
             // A final option is to return true from await_ready(), and this won't run at all.
         }
 
