@@ -39,6 +39,8 @@ static int counter = 0;
 await_return_object<> try_awaiting() {
     auto awaitable = make_my_awaitable([](){ return detail::counter++; });
     // count to five
+    // this causes a stack overflow for large values; see my_awaitable.hpp
+    // for an explanation
     for (auto i = co_await awaitable; i != 5;i = co_await awaitable) {
         std::cout << "not there yet: " << i << "\n";
     }

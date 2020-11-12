@@ -51,9 +51,15 @@ struct my_awaitable {
             // decide we are ready after all, so resume caller of co_await
             coro.resume();
 
-            // we could also leave off the call to resume() and return false from a bool version
-            // of this function. Or we can return true from await_ready(), and this won't run
-            // at all.
+            // we could also leave off the call to resume() and return false from a bool
+            // version of this function. This has a crucial advantage: the awaiting coroutine
+            // resumes without creating a new stack frame for the resume() method.
+            // This can fix stack overflow situations when co_await is called in a loop,
+            // but doesn't work for non-synchronous situations.
+            // See https://lewissbaker.github.io/2020/05/11/understanding_symmetric_transfer
+            // for a detailed explanation.
+
+            // A final option is to return true from await_ready(), and this won't run at all.
         }
 
         my_awaitable* awaitable_;   // remember parent
