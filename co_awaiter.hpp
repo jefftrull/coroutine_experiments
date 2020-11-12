@@ -54,6 +54,7 @@ struct await_return_object {
     };
 
     // void specialization to replace with return_void() is below at namespace scope
+    // this is a workaround for certain MSVC versions:
 #ifdef INTERNAL_VOID_SPECIALIZATION
     template<>
     struct promise_base<void> {
@@ -65,11 +66,26 @@ struct await_return_object {
         // coroutine promise requirements:
 
         auto initial_suspend() const noexcept {
-            return std::experimental::suspend_never(); // produce at least one value
+            // Do *not* suspend initially, because this coroutine needs to run
+            // to establish e.g. signal/slot connections or to yield a first generator value
+            return std::experimental::suspend_never();
+
+            // Lewis Baker suggests suspend_always here to create a "lazy" coroutine,
+            // which removes a race between the execution of the coroutine and
+            // attaching the continuation. We could do that here if we intentionally
+            // added null continuations for coroutines we didn't need to await (i.e.
+            // whose purpose was just to encapsulate co_await to make them usable
+            // in regular functions).
+            // See https://lewissbaker.github.io/2020/05/11/understanding_symmetric_transfer
+            // or his CppCon 2019 talk on Structured Concurrency
         }
 
         auto final_suspend() const noexcept {
-            return std::experimental::suspend_always(); // ?? not sure
+            // after we "fall off" the end of the coroutine, and after locals are
+            // destroyed, suspend before destroying the coroutine itself. We are
+            // letting the await_return_object destructor do that, via the handle's
+            // destroy() method
+            return std::experimental::suspend_always();
         }
 
         // either return_void or return_value will exist, depending on T

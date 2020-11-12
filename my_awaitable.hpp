@@ -42,10 +42,18 @@ struct my_awaitable {
 
         template<typename P>
         void await_suspend(std::experimental::coroutine_handle<P> coro) noexcept {
-            // decide we are ready after all, so resume caller
+            // Per Lewis Baker, the variant of await_suspend() that returns bool means:
+            // true: execution returns to the caller of *our* resume()
+            // false: execution continues immediately on the calling thread
+
+            // the void-returning version which we are using is the same as returning "true"
+
+            // decide we are ready after all, so resume caller of co_await
             coro.resume();
+
             // we could also leave off the call to resume() and return false from a bool version
-            // of this function. That means "don't suspend".
+            // of this function. Or we can return true from await_ready(), and this won't run
+            // at all.
         }
 
         my_awaitable* awaitable_;   // remember parent

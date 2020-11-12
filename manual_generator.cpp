@@ -50,11 +50,18 @@ struct my_return {
         // coroutine promise requirements:
 
         auto initial_suspend() const noexcept {
+            // we don't need to return to the creator of the coroutine prior to
+            // doing work so:
             return std::experimental::suspend_never(); // produce at least one value
         }
 
         auto final_suspend() const noexcept {
-            return std::experimental::suspend_always(); // ?? not sure
+            // suspend "always" if someone else destroys the coroutine
+            // (as we do in the my_return destructor)
+            // choose "never" if it runs off the end and destroys itself
+            // our coroutine has an infinite loop so we will never get here but
+            // for the sake of form:
+            return std::experimental::suspend_always();
         }
 
         void return_void() const noexcept {}
